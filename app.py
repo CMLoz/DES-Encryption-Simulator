@@ -1,3 +1,7 @@
+# DES encrypt/decrypt GUI — small tkinter app.
+# Inputs: key (text), paragraph (plaintext or base64 ciphertext)
+# Outputs: base64 ciphertext (encrypt) or plaintext (decrypt)
+
 import base64
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
@@ -12,11 +16,13 @@ BLOCK_SIZE = 8
 
 
 def pkcs5_pad(data: bytes) -> bytes:
+    # Pad bytes to 8-byte blocks (PKCS#5)
     pad_len = BLOCK_SIZE - (len(data) % BLOCK_SIZE)
     return data + bytes([pad_len]) * pad_len
 
 
 def pkcs5_unpad(data: bytes) -> bytes:
+    # Remove PKCS#5 padding
     if not data:
         return data
     pad_len = data[-1]
@@ -28,7 +34,7 @@ def pkcs5_unpad(data: bytes) -> bytes:
 
 
 def normalize_key(key_str: str) -> bytes:
-    # DES key must be exactly 8 bytes. We'll encode utf-8 and pad/truncate.
+    # Convert user key to exactly 8 bytes (pad or truncate)
     k = key_str.encode("utf-8")
     if len(k) < 8:
         k = k.ljust(8, b" ")
@@ -36,6 +42,7 @@ def normalize_key(key_str: str) -> bytes:
 
 
 def encrypt(plaintext: str, key_str: str) -> str:
+    # Encrypt plaintext and return base64 ciphertext
     if DES is None:
         raise RuntimeError("pycryptodome is not installed. See requirements.txt")
     key = normalize_key(key_str)
@@ -46,6 +53,7 @@ def encrypt(plaintext: str, key_str: str) -> str:
 
 
 def decrypt(b64cipher: str, key_str: str) -> str:
+    # Decrypt base64 ciphertext and return plaintext
     if DES is None:
         raise RuntimeError("pycryptodome is not installed. See requirements.txt")
     key = normalize_key(key_str)
@@ -59,6 +67,7 @@ def decrypt(b64cipher: str, key_str: str) -> str:
 
 
 class DesApp:
+    # GUI class: build widgets and connect actions
     def __init__(self, root: tk.Tk):
         self.root = root
         root.title("DES Encrypt/Decrypt")
@@ -98,9 +107,11 @@ class DesApp:
         tk.Label(frm, textvariable=self.last_saved_var, anchor=tk.W, fg="blue").grid(row=8, column=0, columnspan=2, sticky=tk.W)
 
     def set_status(self, msg: str):
+        # update status line
         self.status.config(text=msg)
 
     def run(self):
+        # read UI values
         mode = self.mode_var.get()
         key = self.key_entry.get()
         data = self.input_text.get("1.0", tk.END).strip()
@@ -111,6 +122,7 @@ class DesApp:
             messagebox.showwarning("Missing data", "Please enter text to encrypt or decrypt.")
             return
 
+        # run encrypt or decrypt and show output
         try:
             if mode == "encrypt":
                 out = encrypt(data, key)
@@ -123,6 +135,7 @@ class DesApp:
                 self.output_text.insert(tk.END, out)
                 self.set_status("Decryption complete.")
         except Exception as e:
+            # show error
             messagebox.showerror("Error", str(e))
             self.set_status("Error: " + str(e))
 
@@ -138,7 +151,7 @@ class DesApp:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(out)
             self.set_status(f"Saved output to: {path}")
-            # update the visible last-saved path label
+            # display last saved path
             self.last_saved_var.set(f"Last saved: {path}")
         except Exception as e:
             messagebox.showerror("Save error", str(e))
@@ -162,7 +175,7 @@ class DesApp:
         self.input_text.delete("1.0", tk.END)
         self.output_text.delete("1.0", tk.END)
         self.set_status("Cleared")
-        # clear last saved path display as well
+        # clear last saved path
         self.last_saved_var.set("")
 
 
